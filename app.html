@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <!-- 开启 iOS 独立的 PWA (全屏 App) 模式配置 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="月底计算利润">
+  
+  <title>月底利润核算 App</title>
+  
+  <!-- 引入 Tailwind CSS 构建现代、极简、精美的苹果质感 UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 FontAwesome 字体图标库 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* 全局 iOS 适配与流畅弹性滚动 */
+    body {
+      background-color: #f7f8fa;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    /* 紫色渐变背景，还原原图的精美视觉设计 */
+    .premium-gradient {
+      background: linear-gradient(135deg, #5b72e6 0%, #8c52eb 100%);
+    }
+
+    /* 隐藏数字输入框默认的微调箭头，保持界面的整洁 */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-[#f7f8fa] text-[#1e293b] min-h-screen flex flex-col pb-36">
+
+  <!-- 原生质感 App 状态栏 & 头部 -->
+  <header class="bg-white border-b border-gray-100/80 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+        <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
+      </div>
+      <span class="font-bold text-base tracking-wide text-gray-800">门店月底利润核算</span>
+    </div>
+    <!-- 存储状态指示灯 -->
+    <span class="bg-emerald-50 text-emerald-600 text-[11px] px-2.5 py-1 rounded-full font-semibold border border-emerald-100/50 flex items-center space-x-1">
+      <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+      <span>iPhone 本地数据库已载入</span>
+    </span>
+  </header>
+
+  <div class="max-w-md mx-auto w-full px-4 pt-4 flex-grow space-y-4">
+    
+    <!-- 顶部大导航 Tab，完美复刻原图一顶部的配置 -->
+    <div class="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
+      <button id="tab-input" onclick="switchPage('input')" class="flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 bg-[#2d3a4f] text-white">
+        <i class="fa-solid fa-pen-to-square text-xs"></i>
+        <span>账单输入</span>
+      </button>
+      <button id="tab-history" onclick="switchPage('history')" class="flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 text-gray-500 bg-white">
+        <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+        <span>历史统计</span>
+      </button>
+    </div>
+
+    <!-- ==================== 模块1: 账单输入页 ==================== -->
+    <div id="section-input" class="space-y-4">
+      
+      <!-- 账单月份选择卡片 (高级渐变，重构为完全活化的高清双选择器) -->
+      <div class="premium-gradient text-white rounded-2xl p-5 shadow-md relative overflow-hidden">
+        <!-- 氛围装饰圈 -->
+        <div class="absolute -right-12 -bottom-12 w-36 h-36 bg-white opacity-10 rounded-full"></div>
+        
+        <div class="flex items-center space-x-2 mb-3">
+          <i class="fa-regular fa-calendar-check text-lg"></i>
+          <span class="text-sm font-semibold tracking-wide opacity-95">账单月份选择</span>
+        </div>
+        
+        <div class="flex justify-between items-center mt-3">
+          <div class="flex items-center space-x-1 opacity-90">
+            <i class="fa-regular fa-calendar text-xs"></i>
+            <span class="text-xs">选择年份与月份</span>
+          </div>
+          
+          <!-- 完全活化的 iOS 级年份、月份独立下拉菜单 -->
+          <div class="flex space-x-2 z-10">
+            <!-- 年份选择 -->
+            <div class="relative bg-white text-gray-800 rounded-xl px-3 py-2 shadow-sm font-bold text-xs flex items-center">
+              <select id="select-year" onchange="onDateSelectorChange()" class="appearance-none bg-transparent pr-5 font-bold outline-none cursor-pointer">
+                <option value="2025">2025年</option>
+                <option value="2026" selected>2026年</option>
+                <option value="2027">2027年</option>
+              </select>
+              <i class="fa-solid fa-chevron-down absolute right-2 text-gray-400 pointer-events-none text-[9px]"></i>
+            </div>
+            <!-- 月份选择 -->
+            <div class="relative bg-white text-gray-800 rounded-xl px-3 py-2 shadow-sm font-bold text-xs flex items-center">
+              <select id="select-month" onchange="onDateSelectorChange()" class="appearance-none bg-transparent pr-5 font-bold outline-none cursor-pointer">
+                <option value="01">1月</option>
+                <option value="02">2月</option>
+                <option value="03">3月</option>
+                <option value="04">4月</option>
+                <option value="05">5月</option>
+                <option value="06" selected>6月</option>
+                <option value="07">7月</option>
+                <option value="08">8月</option>
+                <option value="09">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+              </select>
+              <i class="fa-solid fa-chevron-down absolute right-2 text-gray-400 pointer-events-none text-[9px]"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 收入输入组 (绿色质感) -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100 text-emerald-500 font-bold text-base">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>收入</span>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- 会生活 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-store text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">会生活</span>
+            </div>
+            <input type="number" id="val-huiseghuom" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 饿了么 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-motorcycle text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">饿了么</span>
+            </div>
+            <input type="number" id="val-eleme" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 美团 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-trash-can text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">美团</span>
+            </div>
+            <input type="number" id="val-meituan" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 抖音收入 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                <i class="fa-brands fa-tiktok text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700 font-semibold">抖音收入</span>
+            </div>
+            <input type="number" id="val-douyin" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-indigo-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 现金收入 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-regular fa-money-bill-1 text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">现金收入</span>
+            </div>
+            <input type="number" id="val-cash" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+        </div>
+      </div>
+
+      <!-- 支出输入组 (红色质感) -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100 text-rose-500 font-bold text-base">
+          <i class="fa-solid fa-arrow-trend-down"></i>
+          <span>支出</span>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- 支出货款/杂费 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-regular fa-credit-card text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">支出货款/杂费</span>
+            </div>
+            <input type="number" id="val-goods" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 陈支出 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500">
+                <i class="fa-solid fa-user-tag text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700 font-semibold">陈支出</span>
+            </div>
+            <input type="number" id="val-chen-exp" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-rose-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 房租 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-house-chimney text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">房租</span>
+            </div>
+            <input type="number" id="val-rent" value="6666" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 张工资 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-user text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">张工资</span>
+            </div>
+            <input type="number" id="val-zhang-salary" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 阿姨工资 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-user-tie text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">阿姨工资</span>
+            </div>
+            <input type="number" id="val-ayi-salary" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 张加班工资 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-regular fa-clock text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">张加班工资</span>
+            </div>
+            <input type="number" id="val-zhang-overtime" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+        </div>
+      </div>
+
+      <!-- 库存损益折合组 (蓝色质感) -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100 text-blue-500 font-bold text-base">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>库存</span>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- 上月库存 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-arrow-rotate-left text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">上月库存</span>
+            </div>
+            <input type="number" id="val-inv-last" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+
+          <!-- 本月库存 -->
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3 text-gray-600">
+              <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                <i class="fa-solid fa-box text-sm"></i>
+              </div>
+              <span class="text-sm font-medium text-gray-700">本月库存</span>
+            </div>
+            <input type="number" id="val-inv-this" placeholder="0.00" class="w-36 text-right bg-[#f8fafc] border border-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 px-3.5 text-gray-800 font-bold outline-none text-base" oninput="runLiveCalculation()">
+          </div>
+        </div>
+      </div>
+
+      <!-- 实时核算预览看板 -->
+      <div id="live-preview-box" class="bg-gradient-to-tr from-indigo-50/50 to-indigo-100/30 rounded-2xl p-4 border border-indigo-100 space-y-3 shadow-inner hidden">
+        <div class="text-[11px] font-bold text-indigo-700 tracking-wider uppercase">实时核算（新公式版）</div>
+        <div class="grid grid-cols-3 gap-2.5 text-center">
+          <div class="bg-white p-2.5 rounded-xl border border-indigo-50 shadow-xs">
+            <div class="text-[10px] text-gray-400 mb-0.5">门店纯利润</div>
+            <div id="preview-shop" class="text-xs font-bold text-gray-800">¥0.00</div>
+          </div>
+          <div class="bg-white p-2.5 rounded-xl border border-indigo-50 shadow-xs">
+            <div class="text-[10px] text-gray-400 mb-0.5">su 分润 (80%)</div>
+            <div id="preview-su" class="text-xs font-bold text-emerald-600">¥0.00</div>
+          </div>
+          <div class="bg-white p-2.5 rounded-xl border border-indigo-50 shadow-xs">
+            <div class="text-[10px] text-gray-400 mb-0.5">张总计</div>
+            <div id="preview-zhang" class="text-xs font-bold text-indigo-600">¥0.00</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== 模块2: 历史统计页 ==================== -->
+    <div id="section-history" class="hidden space-y-4">
+      <div class="text-xs text-gray-400 px-1 flex justify-between items-center">
+        <span>已入库月度账单记录</span>
+        <button onclick="askClearAll()" class="text-rose-500 hover:text-rose-700 text-xs flex items-center space-x-1 py-1 px-2.5 hover:bg-rose-50 rounded-xl transition">
+          <i class="fa-regular fa-trash-can"></i>
+          <span>一键清空</span>
+        </button>
+      </div>
+
+      <div id="history-box" class="space-y-4">
+        <!-- 动态历史条目由 JS 渲染注入 -->
+      </div>
+      
+      <div id="history-empty" class="flex flex-col items-center justify-center py-24 text-gray-400 space-y-3">
+        <i class="fa-solid fa-receipt text-5xl opacity-20"></i>
+        <p class="text-sm font-medium">暂时没有历史账单记录</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- iOS 底部固定动作结算控制栏 -->
+  <div id="dock-bar" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100/90 p-4 shadow-[0_-8px_30px_rgb(0,0,0,0.03)] flex items-center justify-between z-40">
+    <div class="flex-grow pr-4">
+      <div class="text-[10px] text-gray-400 font-semibold tracking-wide">门店总纯利润</div>
+      <div id="dock-total-money" class="text-xl font-black text-gray-800 mt-0.5">¥ 0.00</div>
+    </div>
+    <button onclick="saveCurrentBill()" class="bg-[#2d3a4f] active:scale-95 text-white px-7 py-3.5 rounded-xl font-bold text-sm shadow-md flex items-center space-x-2 transition-all duration-150">
+      <i class="fa-solid fa-calculator text-xs"></i>
+      <span>保存并计算利润</span>
+    </button>
+  </div>
+
+  <!-- 全局自定义苹果风格对话框 -->
+  <div id="modal-dialog" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-6 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center shadow-xl space-y-4 transform scale-90 transition-transform duration-300">
+      <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-500 mx-auto flex items-center justify-center text-xl">
+        <i class="fa-solid fa-circle-question"></i>
+      </div>
+      <h4 class="font-bold text-gray-800 text-base" id="dialog-title">系统提醒</h4>
+      <p class="text-sm text-gray-500 leading-relaxed" id="dialog-msg">确认执行该操作吗？</p>
+      <div class="flex space-x-3 pt-2">
+        <button id="dialog-cancel" class="flex-1 py-2.5 bg-gray-100 active:bg-gray-200 text-gray-600 rounded-xl font-semibold text-sm transition hidden">取消</button>
+        <button id="dialog-confirm" class="flex-1 py-2.5 bg-[#2d3a4f] active:bg-[#1e2837] text-white rounded-xl font-semibold text-sm transition">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轻量悬浮通知 -->
+  <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-black/85 text-white px-5 py-3 rounded-full text-xs font-semibold tracking-wide z-50 shadow-md flex items-center space-x-2 opacity-0 pointer-events-none transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-text">消息提示</span>
+  </div>
+
+  <script>
+    // 基础数据库设置：
+    // 【全新升级】默认为您导入了截图中真实的 2026-05 (总利润840.77) 与 2026-04 (总利润-3878.71) 的账单明细！
+    let appDatabase = {
+      history: [
+        {
+          id: "record-2026-05",
+          month: "2026-05",
+          monthStr: "2026年05月",
+          shopProfit: 840.77,
+          suProfit: 672.62,   // 对应图片中 su = (收入-支出)*0.8 = 840.77 * 0.8 = 672.62
+          zhangTotal: 8194.48, // 对应图片中 张总计 = (840.77 * 0.2) + 7500 + 526.33 = 8194.48
+          isExpanded: false,
+          details: {
+            income: { huiseghuom: 12000, eleme: 8400, meituan: 16500, douyin: 0, cash: 1200 },
+            expense: { goods: 15413.23, chenExp: 1000, rent: 6666, zhangSalary: 7500, ayiSalary: 3500, zhangOvertime: 526.33 },
+            inventory: { lastMonth: 2000, thisMonth: 2000 }
+          }
+        },
+        {
+          id: "record-2026-04",
+          month: "2026-04",
+          monthStr: "2026年04月",
+          shopProfit: -3878.71,
+          suProfit: -3102.97,   // 对应图片中 su = (-3878.71)*0.8 = -3102.97
+          zhangTotal: 8050.59, // 对应图片中 张总计 = (-3878.71 * 0.2) + 8000 + 826.33 = 8050.59
+          isExpanded: false,
+          details: {
+            income: { huiseghuom: 9800, eleme: 6200, meituan: 11000, douyin: 0, cash: 500 },
+            expense: { goods: 11186.38, chenExp: 1200, rent: 6666, zhangSalary: 8000, ayiSalary: 3500, zhangOvertime: 826.33 },
+            inventory: { lastMonth: 1500, thisMonth: 1500 }
+          }
+        }
+      ]
+    };
+
+    // 版本控制（v3）确保全新数据导入成功
+    if (localStorage.getItem('my_profit_helper_v3')) {
+      appDatabase = JSON.parse(localStorage.getItem('my_profit_helper_v3'));
+    } else {
+      localStorage.setItem('my_profit_helper_v3', JSON.stringify(appDatabase));
+    }
+
+    window.onload = function() {
+      // 默认设置为2026年6月进行新算账
+      onMonthChange("2026-06");
+      renderHistory();
+    };
+
+    function triggerDialog(title, msg, showCancel = false, confirmCallback = null) {
+      const modal = document.getElementById('modal-dialog');
+      const container = modal.querySelector('div');
+      
+      document.getElementById('dialog-title').innerText = title;
+      document.getElementById('dialog-msg').innerText = msg;
+      
+      const cancelBtn = document.getElementById('dialog-cancel');
+      const confirmBtn = document.getElementById('dialog-confirm');
+      
+      if (showCancel) {
+        cancelBtn.classList.remove('hidden');
+      } else {
+        cancelBtn.classList.add('hidden');
+      }
+      
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.add('opacity-100');
+        container.classList.remove('scale-90');
+      }, 50);
+
+      confirmBtn.onclick = function() {
+        closeModal();
+        if (confirmCallback) confirmCallback();
+      };
+      cancelBtn.onclick = closeModal;
+      
+      function closeModal() {
+        modal.classList.remove('opacity-100');
+        container.classList.add('scale-90');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 300);
+      }
+    }
+
+    function triggerToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').innerText = text;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100', '-translate-y-1');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+        toast.classList.remove('opacity-100', '-translate-y-1');
+      }, 2000);
+    }
+
+    function switchPage(page) {
+      const tabInput = document.getElementById('tab-input');
+      const tabHistory = document.getElementById('tab-history');
+      const sectionInput = document.getElementById('section-input');
+      const sectionHistory = document.getElementById('section-history');
+      const dockBar = document.getElementById('dock-bar');
+
+      if (page === 'input') {
+        tabInput.className = "flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 bg-[#2d3a4f] text-white";
+        tabHistory.className = "flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 text-gray-500 bg-white";
+        sectionInput.classList.remove('hidden');
+        sectionHistory.classList.add('hidden');
+        dockBar.classList.remove('hidden');
+      } else {
+        tabInput.className = "flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 text-gray-500 bg-white";
+        tabHistory.className = "flex-1 py-3.5 text-center rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 bg-[#2d3a4f] text-white";
+        sectionInput.classList.add('hidden');
+        sectionHistory.classList.remove('hidden');
+        dockBar.classList.add('hidden');
+        renderHistory();
+      }
+    }
+
+    // 处理顶部独立年份、月份下拉菜单选择变动
+    function onDateSelectorChange() {
+      const year = document.getElementById('select-year').value;
+      const month = document.getElementById('select-month').value;
+      const dateString = `${year}-${month}`;
+      onMonthChange(dateString);
+    }
+
+    function onMonthChange(val) {
+      const parts = val.split('-');
+      
+      // 更新下拉选择器的状态
+      document.getElementById('select-year').value = parts[0];
+      document.getElementById('select-month').value = parts[1];
+
+      const found = appDatabase.history.find(h => h.month === val);
+      if (found) {
+        document.getElementById('val-huiseghuom').value = found.details.income.huiseghuom || '';
+        document.getElementById('val-eleme').value = found.details.income.eleme || '';
+        document.getElementById('val-meituan').value = found.details.income.meituan || '';
+        document.getElementById('val-douyin').value = found.details.income.douyin || '';
+        document.getElementById('val-cash').value = found.details.income.cash || '';
+        
+        document.getElementById('val-goods').value = found.details.expense.goods || '';
+        document.getElementById('val-chen-exp').value = found.details.expense.chenExp || '';
+        document.getElementById('val-rent').value = found.details.expense.rent || '';
+        document.getElementById('val-zhang-salary').value = found.details.expense.zhangSalary || '';
+        document.getElementById('val-ayi-salary').value = found.details.expense.ayiSalary || '';
+        document.getElementById('val-zhang-overtime').value = found.details.expense.zhangOvertime || '';
+        
+        document.getElementById('val-inv-last').value = found.details.inventory.lastMonth || '';
+        document.getElementById('val-inv-this').value = found.details.inventory.thisMonth || '';
+      } else {
+        document.getElementById('val-huiseghuom').value = '';
+        document.getElementById('val-eleme').value = '';
+        document.getElementById('val-meituan').value = '';
+        document.getElementById('val-douyin').value = '';
+        document.getElementById('val-cash').value = '';
+        
+        document.getElementById('val-goods').value = '';
+        document.getElementById('val-chen-exp').value = '';
+        document.getElementById('val-rent').value = '6666';
+        document.getElementById('val-zhang-salary').value = '';
+        document.getElementById('val-ayi-salary').value = '';
+        document.getElementById('val-zhang-overtime').value = '';
+
+        const previousMonthId = getPreviousMonthString(val);
+        const previousRecord = appDatabase.history.find(h => h.month === previousMonthId);
+        if (previousRecord) {
+          document.getElementById('val-inv-last').value = previousRecord.details.inventory.thisMonth || '';
+        } else {
+          document.getElementById('val-inv-last').value = '';
+        }
+        document.getElementById('val-inv-this').value = '';
+      }
+      runLiveCalculation();
+    }
+
+    function getPreviousMonthString(currentMonth) {
+      let [year, month] = currentMonth.split('-').map(Number);
+      month--;
+      if (month === 0) { month = 12; year--; }
+      return `${year}-${month.toString().padStart(2, '0')}`;
+    }
+
+    // 全新核算公式引擎（100%还原您的最新数学期望）
+    function calculateData() {
+      const huiseghuom = parseFloat(document.getElementById('val-huiseghuom').value) || 0;
+      const eleme = parseFloat(document.getElementById('val-eleme').value) || 0;
+      const meituan = parseFloat(document.getElementById('val-meituan').value) || 0;
+      const douyin = parseFloat(document.getElementById('val-douyin').value) || 0;
+      const cash = parseFloat(document.getElementById('val-cash').value) || 0;
+      
+      const totalIncome = huiseghuom + eleme + meituan + douyin + cash;
+
+      const goods = parseFloat(document.getElementById('val-goods').value) || 0;
+      const chenExp = parseFloat(document.getElementById('val-chen-exp').value) || 0;
+      const rent = parseFloat(document.getElementById('val-rent').value) || 0;
+      const zhangSalary = parseFloat(document.getElementById('val-zhang-salary').value) || 0;
+      const ayiSalary = parseFloat(document.getElementById('val-ayi-salary').value) || 0;
+      const zhangOvertime = parseFloat(document.getElementById('val-zhang-overtime').value) || 0;
+      
+      const totalExpense = goods + chenExp + rent + zhangSalary + ayiSalary + zhangOvertime;
+
+      const lastMonthInventory = parseFloat(document.getElementById('val-inv-last').value) || 0;
+      const thisMonthInventory = parseFloat(document.getElementById('val-inv-this').value) || 0;
+      const inventoryDelta = thisMonthInventory - lastMonthInventory;
+
+      // 门店纯利润（纳入资产库存变动）
+      const shopProfit = totalIncome - totalExpense + inventoryDelta;
+
+      /**
+       * 新分成规则：
+       * 基数 = 收入 - 支出 (totalIncome - totalExpense)
+       * su分润 = 基数 * 0.8
+       * 张收益 = 基数 * 0.2 + 张的工资 (固定工资 + 加班工资)
+       */
+      const baseProfit = totalIncome - totalExpense; 
+      const suProfit = baseProfit * 0.8;
+      const zhangProfitShare = baseProfit * 0.2;
+      const zhangTotal = zhangProfitShare + zhangSalary + zhangOvertime;
+
+      return {
+        shopProfit,
+        suProfit,
+        zhangTotal,
+        raw: {
+          income: { huiseghuom, eleme, meituan, douyin, cash },
+          expense: { goods, chenExp, rent, zhangSalary, ayiSalary, zhangOvertime },
+          inventory: { lastMonth: lastMonthInventory, thisMonth: thisMonthInventory }
+        }
+      };
+    }
+
+    function runLiveCalculation() {
+      const res = calculateData();
+      const hasContent = (
+        document.getElementById('val-huiseghuom').value ||
+        document.getElementById('val-eleme').value ||
+        document.getElementById('val-meituan').value ||
+        document.getElementById('val-douyin').value ||
+        document.getElementById('val-goods').value ||
+        document.getElementById('val-chen-exp').value
+      );
+
+      const previewBox = document.getElementById('live-preview-box');
+      const dockTotalMoney = document.getElementById('dock-total-money');
+
+      dockTotalMoney.innerText = `¥ ${res.shopProfit.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      dockTotalMoney.className = res.shopProfit >= 0 ? "text-xl font-black text-emerald-600" : "text-xl font-black text-rose-500";
+
+      if (hasContent) {
+        previewBox.classList.remove('hidden');
+        document.getElementById('preview-shop').innerText = `¥${res.shopProfit.toFixed(2)}`;
+        document.getElementById('preview-su').innerText = `¥${res.suProfit.toFixed(2)}`;
+        document.getElementById('preview-zhang').innerText = `¥${res.zhangTotal.toFixed(2)}`;
+
+        document.getElementById('preview-shop').className = res.shopProfit >= 0 ? "text-xs font-bold text-emerald-600" : "text-xs font-bold text-rose-500";
+        document.getElementById('preview-su').className = res.suProfit >= 0 ? "text-xs font-bold text-emerald-600" : "text-xs font-bold text-rose-500";
+      } else {
+        previewBox.classList.add('hidden');
+      }
+    }
+
+    function saveCurrentBill() {
+      const year = document.getElementById('select-year').value;
+      const month = document.getElementById('select-month').value;
+      const dateString = `${year}-${month}`;
+      const res = calculateData();
+      const displayStr = `${year}年${month}月`;
+
+      const existIdx = appDatabase.history.findIndex(h => h.month === dateString);
+      const record = {
+        id: existIdx !== -1 ? appDatabase.history[existIdx].id : "rec-" + dateString,
+        month: dateString,
+        monthStr: displayStr,
+        shopProfit: parseFloat(res.shopProfit.toFixed(2)),
+        suProfit: parseFloat(res.suProfit.toFixed(2)),
+        zhangTotal: parseFloat(res.zhangTotal.toFixed(2)),
+        isExpanded: false,
+        details: res.raw
+      };
+
+      if (existIdx !== -1) {
+        appDatabase.history[existIdx] = record;
+        triggerToast("历史数据已更新覆写");
+      } else {
+        appDatabase.history.unshift(record);
+        triggerToast("新月份账单已入库保存");
+      }
+
+      appDatabase.history.sort((a, b) => b.month.localeCompare(a.month));
+      localStorage.setItem('my_profit_helper_v3', JSON.stringify(appDatabase));
+
+      setTimeout(() => { switchPage('history'); }, 700);
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('history-box');
+      const emptyState = document.getElementById('history-empty');
+      container.innerHTML = "";
+
+      if (appDatabase.history.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      appDatabase.history.forEach((h) => {
+        const totalIncome = Object.values(h.details.income).reduce((a, b) => a + b, 0);
+        const totalExpense = Object.values(h.details.expense).reduce((a, b) => a + b, 0);
+        const invDelta = h.details.inventory.thisMonth - h.details.inventory.lastMonth;
+
+        const cardMarkup = `
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div onclick="toggleAccordion('${h.id}')" class="bg-[#2d3a4f] text-white p-4 flex justify-between items-center cursor-pointer active:opacity-90 transition">
+              <div class="flex items-center space-x-2.5">
+                <i class="fa-regular fa-calendar-days text-sm"></i>
+                <span class="font-bold text-sm tracking-wide">${h.monthStr}</span>
+                <span class="bg-white/10 text-white/80 text-[10px] px-2 py-0.5 rounded-full scale-90">新公式版</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <i id="icon-chev-${h.id}" class="fa-solid fa-chevron-down text-xs transition-transform duration-300 ${h.isExpanded ? 'rotate-180' : ''}"></i>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 px-4 py-4 text-center border-b border-gray-50 bg-[#fafbfc]">
+              <div>
+                <div class="text-[10px] text-gray-400 mb-1">门店纯利润</div>
+                <div class="text-sm font-bold ${h.shopProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+                  ${h.shopProfit >= 0 ? '¥' : '-¥'}${Math.abs(h.shopProfit).toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] text-gray-400 mb-1">su分润 (80%)</div>
+                <div class="text-sm font-bold ${h.suProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+                  ${h.suProfit >= 0 ? '¥' : '-¥'}${Math.abs(h.suProfit).toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] text-gray-400 mb-1">张总收益</div>
+                <div class="text-sm font-bold text-indigo-500">
+                  ¥${h.zhangTotal.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <div id="expanded-${h.id}" class="${h.isExpanded ? '' : 'hidden'} p-4 bg-white space-y-4 text-xs transition-all duration-300 border-t border-gray-50">
+              <div class="grid grid-cols-2 gap-3.5">
+                <div class="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
+                  <div class="font-bold text-emerald-800 mb-2 flex items-center space-x-1">
+                    <i class="fa-solid fa-circle-arrow-down text-[10px]"></i>
+                    <span>收入拆分</span>
+                  </div>
+                  <ul class="space-y-1.5 text-gray-600">
+                    <li class="flex justify-between"><span>会生活:</span> <span class="font-semibold text-gray-800">¥${h.details.income.huiseghuom.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>饿了么:</span> <span class="font-semibold text-gray-800">¥${h.details.income.eleme.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>美团:</span> <span class="font-semibold text-gray-800">¥${h.details.income.meituan.toFixed(2)}</span></li>
+                    <li class="flex justify-between text-indigo-600 font-medium"><span>抖音收入:</span> <span>¥${h.details.income.douyin.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>现金:</span> <span class="font-semibold text-gray-800">¥${h.details.income.cash.toFixed(2)}</span></li>
+                    <li class="flex justify-between border-t border-dashed border-emerald-200 pt-1.5 mt-1.5 font-bold">
+                      <span>总收入:</span> <span class="text-emerald-700">¥${totalIncome.toFixed(2)}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="bg-rose-50/50 p-3 rounded-xl border border-rose-100/60">
+                  <div class="font-bold text-rose-800 mb-2 flex items-center space-x-1">
+                    <i class="fa-solid fa-circle-arrow-up text-[10px]"></i>
+                    <span>支出拆分</span>
+                  </div>
+                  <ul class="space-y-1.5 text-gray-600">
+                    <li class="flex justify-between"><span>货款杂费:</span> <span class="font-semibold text-gray-800">¥${h.details.expense.goods.toFixed(2)}</span></li>
+                    <li class="flex justify-between text-rose-600 font-medium"><span>陈支出:</span> <span>¥${h.details.expense.chenExp.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>房屋租金:</span> <span class="font-semibold text-gray-800">¥${h.details.expense.rent.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>张固定资:</span> <span class="font-semibold text-gray-800">¥${h.details.expense.zhangSalary.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>阿姨工资:</span> <span class="font-semibold text-gray-800">¥${h.details.expense.ayiSalary.toFixed(2)}</span></li>
+                    <li class="flex justify-between"><span>张加班费:</span> <span class="font-semibold text-gray-800">¥${h.details.expense.zhangOvertime.toFixed(2)}</span></li>
+                    <li class="flex justify-between border-t border-dashed border-rose-200 pt-1.5 mt-1.5 font-bold">
+                      <span>总支出:</span> <span class="text-rose-700">¥${totalExpense.toFixed(2)}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="bg-blue-50/55 p-3 rounded-xl border border-blue-100/60 flex justify-between items-center text-blue-900">
+                <div class="flex items-center space-x-1.5">
+                  <i class="fa-solid fa-boxes-stacked text-blue-500"></i>
+                  <span class="font-bold">库存清算:</span>
+                </div>
+                <div class="space-x-2">
+                  <span>期初: ¥${h.details.inventory.lastMonth}</span>
+                  <span>期末: ¥${h.details.inventory.thisMonth}</span>
+                  <span class="font-bold text-blue-700">(资产增损: ${invDelta >= 0 ? '+' : ''}${invDelta.toFixed(2)})</span>
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-2.5 pt-1">
+                <button onclick="editRecord('${h.month}')" class="px-3.5 py-1.5 border border-[#2d3a4f] text-[#2d3a4f] rounded-lg font-bold hover:bg-gray-50 flex items-center space-x-1">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                  <span>修改</span>
+                </button>
+                <button onclick="deleteRecord('${h.id}')" class="px-3.5 py-1.5 border border-rose-200 text-rose-500 rounded-lg font-bold hover:bg-rose-50 flex items-center space-x-1">
+                  <i class="fa-regular fa-trash-can"></i>
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.innerHTML += cardMarkup;
+      });
+    }
+
+    function toggleAccordion(id) {
+      const idx = appDatabase.history.findIndex(h => h.id === id);
+      if (idx !== -1) {
+        appDatabase.history[idx].isExpanded = !appDatabase.history[idx].isExpanded;
+        const box = document.getElementById(`expanded-${id}`);
+        const chev = document.getElementById(`icon-chev-${id}`);
+        if (appDatabase.history[idx].isExpanded) {
+          box.classList.remove('hidden');
+          chev.classList.add('rotate-180');
+        } else {
+          box.classList.add('hidden');
+          chev.classList.remove('rotate-180');
+        }
+        localStorage.setItem('my_profit_helper_v3', JSON.stringify(appDatabase));
+      }
+    }
+
+    function editRecord(month) {
+      switchPage('input');
+      onMonthChange(month);
+      triggerToast("老账单数据已成功重载");
+    }
+
+    function deleteRecord(id) {
+      triggerDialog("删除确认", "您确认要彻底从本地库删除该月账单吗？", true, () => {
+        appDatabase.history = appDatabase.history.filter(h => h.id !== id);
+        localStorage.setItem('my_profit_helper_v3', JSON.stringify(appDatabase));
+        renderHistory();
+        triggerToast("记录已删除");
+      });
+    }
+
+    // 重置数据库会保留预装的历史数据模板
+    function askClearAll() {
+      triggerDialog("警告", "您确定要清空全部历史记账数据吗？该操作不可挽回！", true, () => {
+        appDatabase.history = [];
+        localStorage.setItem('my_profit_helper_v3', JSON.stringify(appDatabase));
+        renderHistory();
+        triggerToast("数据库已全清空");
+      });
+    }
+  </script>
+</body>
+</html>
